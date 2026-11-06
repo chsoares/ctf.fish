@@ -1,5 +1,10 @@
 
 function ctf
+    if not set -q CTF_HOME; or not test -d "$CTF_HOME"
+        echo "CTF_HOME is not set or does not exist." >&2
+        return 1
+    end
+
     source "$CTF_HOME/functions/_ctf_colors.fish"
     set -l commands start cleanup addhost env creds sync
 
@@ -10,6 +15,11 @@ function ctf
 
     set -l subcmd $argv[1]
     set -e argv[1]
+
+    if test "$subcmd" = "-h" -o "$subcmd" = "--help" -o "$subcmd" = "help"
+        ctf_show_menu
+        return 0
+    end
 
     if contains -- $subcmd $commands
         switch $subcmd

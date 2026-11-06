@@ -62,11 +62,13 @@ Each box directory contains:
 
 #### Box Cleanup (`cleanup`)
 1. Backs up current /etc/hosts to box directory
-2. Resets /etc/hosts to localhost only
-3. Moves active box from `0_<boxname>` to `<boxname>`
-4. Cleans up Obsidian integration
-5. Unsets environment variables
-6. Syncs time with public NTP
+2. Removes the box IP/hostname entries from /etc/hosts while preserving
+   unrelated entries and the localhost records
+3. Aborts if the archived destination already exists (no nested moves)
+4. Moves active box from `0_<boxname>` to `<boxname>`
+5. Cleans up Obsidian integration
+6. Unsets environment variables
+7. Syncs time with public NTP
 
 ### Integration Features
 
