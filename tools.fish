@@ -60,6 +60,7 @@ function patch_nmap_services
     set -l tmp (mktemp)
     awk -F'\t' 'BEGIN { OFS = "\t" }
         $2 == "3389/tcp" || $2 == "3389/udp" { $1 = "rdp" }
+        $2 == "5985/tcp" || $2 == "5985/udp" || $2 == "5986/tcp" || $2 == "5986/udp" { $1 = "winrm" }
         $2 == "5985/tcp" || $2 == "5986/tcp" { $3 = "0.050000" }
         { print }
     ' $services > $tmp
