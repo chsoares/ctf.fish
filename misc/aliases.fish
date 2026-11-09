@@ -1,6 +1,23 @@
+# Load the active box environment. If the global env.fish disappeared (for
+# example after a cleanup), recover it when there is exactly one active 0_*
+# box. With multiple active boxes, let the user pick with `ctf start`.
 if test -f ~/Lab/env.fish
     source ~/Lab/env.fish
-    cd $boxpwd
+    test -d "$boxpwd"; and cd "$boxpwd"
+else
+    set -l active_envs
+    for envfile in ~/Lab/boxes/0_*/env.fish
+        test -f $envfile; and set -a active_envs $envfile
+    end
+
+    if test (count $active_envs) -eq 1
+        if cp $active_envs[1] ~/Lab/env.fish
+            source ~/Lab/env.fish
+            test -d "$boxpwd"; and cd "$boxpwd"
+        end
+    else if test (count $active_envs) -gt 1
+        echo "ctf: multiple active boxes found; run 'ctf start <box> <ip>' to select one." >&2
+    end
 end
 
 ## Aliases
@@ -46,7 +63,15 @@ end
 ## Abbreviations
 abbr --add nmap 'sudo nmap --min-rate 10000'
 abbr --add ovpn 'sudo openvpn'
-abbr --add box 'cd $boxpwd'
+abbr --erase box 2>/dev/null
+function box
+    if set -q boxpwd; and test -d "$boxpwd"
+        cd "$boxpwd"
+    else
+        echo "ctf: no active box; run 'ctf start <box> <ip>'." >&2
+        return 1
+    end
+end
 abbr --add john 'john -w=$rockyou'
 
 ## Variables
