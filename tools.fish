@@ -47,6 +47,41 @@ function install_pipx_packages
     end
 end
 
+# nmap's service database is root-owned. Patch it so 3389 is labelled rdp and
+# the WinRM ports are common enough to be picked up by `nmap -F`.
+function patch_nmap_services
+    set -l services /usr/share/nmap/nmap-services
+    if not test -f $services
+        ctf_warn "nmap-services not found; skipping nmap patch."
+        return
+    end
+
+    ctf_header "Patching nmap service database..."
+    set -l tmp (mktemp)
+    awk -F'\t' 'BEGIN { OFS = "\t" }
+        $2 == "3389/tcp" || $2 == "3389/udp" { $1 = "rdp" }
+        $2 == "5985/tcp" || $2 == "5986/tcp" { $3 = "0.050000" }
+        { print }
+    ' $services > $tmp
+
+    if cmp -s $services $tmp
+        ctf_success "nmap-services already patched"
+        rm -f $tmp
+        return
+    end
+
+    if not test -f "$services.ctf.fish.bak"
+        sudo cp $services "$services.ctf.fish.bak"
+    end
+
+    if sudo install -m 644 $tmp $services
+        ctf_success "nmap-services patched (3389 -> rdp, 5985/5986 in fast scan)"
+    else
+        ctf_error "Failed to patch nmap-services"
+    end
+    rm -f $tmp
+end
+
 install_yay_packages \
     bettercap \
     bind \
@@ -90,6 +125,8 @@ install_yay_packages \
     python-krb5 \
     python-pipx \
     python-pwntools
+
+patch_nmap_services
 
 install_pipx_packages \
     git+https://github.com/Pennyw0rth/NetExec \
