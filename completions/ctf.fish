@@ -1,8 +1,6 @@
 # Helper: IPs from /etc/hosts (excluding localhost)
 function __ctf_ips
-    awk '{print $1}' /etc/hosts 2>/dev/null \
-        | string match -rv '^(#|127\.|::1|0\.0\.0\.0)' \
-        | sort -u
+    __ctf_completion_targets --hosts
 end
 
 # Helper: box names from $CTF_LAB/boxes, stripping the active 0_ prefix
