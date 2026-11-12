@@ -25,11 +25,34 @@ function _ctf_env
         return 1
     end
 
-    if not set -q boxpwd; or not test -f $boxpwd/env.fish
-        ctf_error "Box env.fish not found."
+    if not set -q boxpwd; or not test -d "$boxpwd"
+        ctf_error "Box directory not found. Run 'ctf start <box> <ip>' first."
         return 1
     end
-    set -l boxenv $boxpwd/env.fish
+
+    set -l boxenv "$boxpwd/env.fish"
+    if not test -f "$boxenv"
+        if not test -f "$CTF_LAB/env.fish"
+            ctf_error "Box env.fish not found and no global env.fish to restore from."
+            return 1
+        end
+        ctf_warn "Box env.fish not found; restoring it from $CTF_LAB/env.fish"
+        if not cp "$CTF_LAB/env.fish" "$boxenv"
+            ctf_error "Failed to restore $boxenv"
+            return 1
+        end
+    end
+
+    # Repair old environments created before wg0 was supported.
+    if not set -q arch; or test -z "$arch"
+        set -l detected (ctf_arch_ip)
+        if test -n "$detected"
+            ctf_env_write_var "$boxenv" arch "$detected"
+            cp "$boxenv" "$CTF_LAB/env.fish"
+            source "$CTF_LAB/env.fish"
+            ctf_info "Detected \$arch from VPN interface: $detected"
+        end
+    end
 
     # ctf env
     if test (count $argv) -eq 0

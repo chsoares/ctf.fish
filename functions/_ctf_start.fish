@@ -142,7 +142,7 @@ function _ctf_start
     end
 
     # === New box ===
-    set -l arch_ip (ip a 2>/dev/null | grep tun0 | grep -oE "[0-9]+\.[0-9]+\.[0-9]+\.[0-9]+" | head -n1)
+    set -l arch_ip (ctf_arch_ip)
     set -l url "http://$box.htb"
     set -l boxpwd $box_dir_zero
 
@@ -173,7 +173,7 @@ function _ctf_start
     if test -n "$arch_ip"
         ctf_info "\$arch is set to $arch_ip"
     else
-        ctf_warn "\$arch is empty: tun0 IP not found."
+        ctf_warn "\$arch is empty: no IP found on tun0 or wg0."
     end
     ctf_info "\$ip is set to $ip"
     ctf_info "\$box is set to $box"
