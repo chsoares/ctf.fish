@@ -94,9 +94,9 @@ function __ctf_creds_show --argument-names file filter
         end
 
         if test -n "$host"
-            printf '  %s : %s (%s)\n' "$user" "$secret" "$host"
+            printf '%s : %s (%s)\n' "$user" "$secret" "$host"
         else
-            printf '  %s : %s\n' "$user" "$secret"
+            printf '%s : %s\n' "$user" "$secret"
         end
     end
     rm -f $tmp
