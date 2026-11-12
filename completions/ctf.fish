@@ -30,6 +30,33 @@ function __ctf_addhost_arg
     end
 end
 
+# Variables from the box env.fish, with their current values.
+function __ctf_env_vars
+    set -l file $CTF_LAB/env.fish
+    test -f "$file"; or return
+
+    while read -l line
+        string match -q 'set -gx *' -- $line; or continue
+        set -l parts (string split ' ' -- $line)
+        test (count $parts) -ge 4; or continue
+        set -l var $parts[3]
+        set -l value (string join ' ' $parts[4..-1])
+        if string match -qi '*pass*' -- $var; or string match -qi '*secret*' -- $var; or string match -qi '*token*' -- $var; or string match -qi '*key*' -- $var; or string match -qi '*hash*' -- $var
+            set value '***'
+        else if test -z "$value"; or test "$value" = "''"
+            set value '(empty)'
+        end
+        printf '%s\t%s\n' "$var" "$value"
+    end < "$file"
+end
+
+function __ctf_env_set_var_arg
+    set -l tokens (commandline -opc)
+    if test (count $tokens) -eq 3; and test "$tokens[2]" = env; and test "$tokens[3]" = set
+        __ctf_env_vars
+    end
+end
+
 # Domains and local pseudo-domains already present in the box creds file.
 function __ctf_creds_domains
     set -l file creds.txt
@@ -37,6 +64,7 @@ function __ctf_creds_domains
         set file "$boxpwd/creds.txt"
     end
 
+    set -l counts (mktemp)
     if test -f "$file"
         while read -l line
             set line (string trim -- $line)
@@ -53,14 +81,31 @@ function __ctf_creds_domains
             if not string match -q 'local*' -- $domain; and not string match -q '*.*' -- $domain
                 continue
             end
-            echo $domain
+            echo $domain >> $counts
             if string match -q 'local.*' -- $domain
-                echo local
+                echo local >> $counts
             end
-        end < "$file" | sort -u
+        end < "$file"
     end
 
-    __ctf_completion_domains 2>/dev/null
+    set -l seen
+    for entry in (sort $counts | uniq -c | awk '{ print $1 "\t" $2 }')
+        set -l parts (string split \t -- $entry)
+        set -l count $parts[1]
+        set -l domain $parts[2]
+        set -l desc "$count entry"
+        if test "$count" -ne 1
+            set desc "$count entries"
+        end
+        printf '%s\t%s\n' "$domain" "$desc"
+        set -a seen $domain
+    end
+    rm -f $counts
+
+    for domain in (__ctf_completion_domains 2>/dev/null)
+        contains -- $domain $seen; and continue
+        printf '%s\t%s\n' "$domain" "0 entries"
+    end
 end
 
 # ctf does not take file arguments
@@ -78,13 +123,14 @@ complete -c ctf -f -n '__fish_use_subcommand' -a "sync"     -d "Sync time with t
 complete -c ctf -f -n '__fish_seen_subcommand_from creds'
 
 # ctf env subcommands
-complete -c ctf -n '__fish_seen_subcommand_from env' -f -a "set"  -d "Set or update a variable"
-complete -c ctf -n '__fish_seen_subcommand_from env' -f -a "edit" -d "Edit the box environment file"
+complete -c ctf -n '__fish_seen_subcommand_from env; and not __fish_seen_subcommand_from set edit' -f -a "set"  -d "Set or update a variable"
+complete -c ctf -n '__fish_seen_subcommand_from env; and not __fish_seen_subcommand_from set edit' -f -a "edit" -d "Edit the box environment file"
+complete -c ctf -f -n '__fish_seen_subcommand_from env' -a '(__ctf_env_set_var_arg)'
 
 # Dynamic positional arguments
-complete -c ctf -n '__fish_seen_subcommand_from addhost' -f -a '(__ctf_addhost_arg)' -d "Target IP address"
-complete -c ctf -n '__fish_seen_subcommand_from start'   -f -a '(__ctf_start_arg)'   -d "Existing box name"
-complete -c ctf -n '__fish_seen_subcommand_from sync'    -f -a '(__ctf_ips)'         -d "Target IP address to sync with"
+complete -c ctf -n '__fish_seen_subcommand_from addhost' -f -a '(__ctf_addhost_arg)'
+complete -c ctf -n '__fish_seen_subcommand_from start'   -f -a '(__ctf_start_arg)'
+complete -c ctf -n '__fish_seen_subcommand_from sync'    -f -a '(__ctf_ips)'
 complete -c ctf -n '__fish_seen_subcommand_from sync'    -f -a "--off"               -d "Unsync and use public NTP"
 
 # ctf creds domain completion
